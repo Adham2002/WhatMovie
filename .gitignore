@@ -1,0 +1,14 @@
+# Ignore environment and config files containing sensitive information
+.env
+config.json
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+# Data files
+*.csv
+*.json
+# System files
+.DS_Store
+Thumbs.db
