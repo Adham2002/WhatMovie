@@ -1,0 +1,69 @@
+DECLARE N DEFAULT (SELECT COUNT(*) FROM movies.doc_stats);
+
+CREATE OR REPLACE TABLE movies.inverted_index AS
+WITH 
+    movie_terms AS(
+        SELECT
+            token AS term,
+            movie_id,
+            COUNT(*) AS tf
+        FROM 
+            movies.tokens
+        GROUP BY 
+            token, 
+            movie_id
+    ),
+    blocks AS (
+        SELECT
+            term,
+            block_num,
+            COUNT(*) AS block_df,
+
+            ARRAY_AGG(
+                STRUCT(
+                    doc_id, 
+                    movies.bm25_tf(tf, len_ratio) AS value
+                )
+            ) AS block_bm25_tfs,
+
+            MAX(movies.bm25_tf(tf, len_ratio)) AS block_max
+        FROM 
+        movie_terms
+        LEFT JOIN movies.doc_stats
+            USING(movie_id)
+        GROUP BY
+            term,
+            block_num
+    ),
+    index AS(
+        SELECT
+            term,
+            SUM(block_df) AS df,
+            LOG(N / SUM(block_df)) AS idf,
+            ARRAY_CONCAT_AGG(block_bm25_tfs) AS bm25_tfs,
+
+            ARRAY_AGG(
+                STRUCT(block_num, block_max AS value)
+                IGNORE NULLS 
+            ) AS block_maxes
+
+        FROM 
+            blocks
+        GROUP BY
+            term
+    )
+
+SELECT
+    term,
+    df,
+    idf,
+
+    ARRAY(
+        SELECT STRUCT(bm25_tf.doc_id, idf * bm25_tf.value AS bm25_score) FROM UNNEST(bm25_tfs) AS bm25_tf ORDER BY bm25_tf.doc_id
+    ) AS doc_list,
+
+    ARRAY(
+        SELECT STRUCT(block_max.block_num, idf * block_max.value AS block_max) FROM UNNEST(block_maxes) AS block_max ORDER BY block_max.block_num
+    ) AS block_list
+
+FROM index;

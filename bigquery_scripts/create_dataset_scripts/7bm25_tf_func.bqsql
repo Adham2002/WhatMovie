@@ -1,0 +1,4 @@
+CREATE OR REPLACE FUNCTION bm25_tf(tf INT64, len_ratio FLOAT64)
+RETURNS FLOAT64 AS (
+    (2.2 * tf) / (0.3 + 0.9 * len_ratio + tf)
+);

@@ -1,0 +1,59 @@
+    -- CREATE OR REPLACE TABLE test.q_terms AS (
+    --     WITH q_tokens AS (
+    --         SELECT 
+    --             term
+    --         FROM 
+    --             UNNEST(SPLIT(LOWER(REGEXP_REPLACE('few men', r'[^A-Za-z0-9 ]', '')), ' ')) AS term
+    --         WHERE term != ''
+    --     )
+
+    --     SELECT
+    --         ROW_NUMBER() OVER() AS term_id,
+    --         term, 
+    --         doc_list
+    --     FROM 
+    --         q_tokens 
+    --     JOIN test.inverted_index
+    --         USING(term)
+    -- );
+
+    -- ------------------------------------------------------------------------------------------
+    -- -- 2) Explode the block_max lists to calculate per doc block_max (∑_i max(term_i, block))
+    -- ------------------------------------------------------------------------------------------
+    -- CREATE TABLE test.doc_block_maxes AS (
+    --     SELECT
+    --         bm.block_num,
+    --         SUM(bm.block_max) AS block_max_score,
+    --     FROM 
+    --         test.q_terms,
+    --         UNNEST(block_maxes) AS bm
+    --     GROUP BY 
+    --         bm.block_num
+    -- );
+CREATE OR REPLACE PROCEDURE movies.query_dense_index (q STRING, k INT64)
+BEGIN
+    WITH top_k AS(
+        SELECT query.query, base.movie_id, base.embeddings
+        FROM
+        VECTOR_SEARCH(
+            TABLE `movies.dense_embeddings`,
+            'embeddings',
+            (
+                SELECT 
+                    ml_generate_embedding_result, content AS query
+                FROM 
+                    ML.GENERATE_EMBEDDING(
+                        MODEL movies.dense_embedding_model,
+                        (SELECT q as content)
+                    )
+            ),
+            top_k => 50
+        )
+    )
+
+    SELECT movie_id, movie_details
+    FROM
+        top_k
+    JOIN movies.movies
+        USING (movie_id);
+END;

@@ -1,0 +1,4 @@
+CREATE OR REPLACE VECTOR INDEX 
+    movies.dense_index ON 
+        movies.dense_embeddings(embeddings)
+OPTIONS (index_type = 'IVF', distance_type = 'DOT_PRODUCT');

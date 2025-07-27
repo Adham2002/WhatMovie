@@ -1,0 +1,12 @@
+CREATE OR REPLACE PROCEDURE `test.score_block`(block INT64, lb FLOAT64)
+BEGIN
+	SELECT
+		p.doc_id,
+		SUM(p.bm25_score) AS score
+	FROM  test.q_terms qt
+	JOIN  UNNEST(doc_list) AS p
+	JOIN  test.doc_block_maxes dcb
+		ON dcb.block_num = CAST(DIV(p.doc_id, 128) AS INT64)
+	GROUP BY 
+		doc_id;
+END;

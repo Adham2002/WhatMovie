@@ -1,0 +1,20 @@
+CREATE OR REPLACE TABLE doc_stats AS
+WITH ds AS(
+    SELECT 
+        DIV(ROW_NUMBER() OVER(ORDER BY movie_id) - 1, 128) AS block_num,
+        ROW_NUMBER() OVER(ORDER BY movie_id) - 1 AS doc_id,
+        movie_id,
+        COUNT(*) AS doc_len
+    FROM 
+        tokens
+    GROUP BY 
+        movie_id
+)
+SELECT 
+    block_num,
+    doc_id,
+    movie_id,
+    doc_len,
+    doc_len / (SELECT AVG(doc_len) FROM ds) AS len_ratio,
+FROM 
+    ds;

@@ -1,0 +1,60 @@
+CREATE OR REPLACE PROCEDURE `movies.bm25_search`(q STRING, k INT64)
+-------------------------------------------------------------------
+--  Procedure: dataset.search_bm25
+--  Args
+--     IN  q   STRING        e.g. 'ballet rivalry drama'
+--     IN  k   INT64         number of hits to return
+--  Result
+--     SELECT doc_id , score
+-------------------------------------------------------------------
+BEGIN
+  ------------------------------------------------------
+  -- 1) Pull the matching rows from the inverted index
+  ------------------------------------------------------
+    CREATE TEMP TABLE q_terms AS (
+        WITH q_tokens AS (
+            SELECT 
+                term
+            FROM 
+                UNNEST(SPLIT(LOWER(REGEXP_REPLACE(q, r'[^A-Za-z0-9 ]', '')), ' ')) AS term
+            WHERE term != ''
+        )
+
+        SELECT
+            ROW_NUMBER() OVER() AS term_id,
+            term, 
+            doc_list
+        FROM 
+            q_tokens 
+        JOIN movies.inverted_index
+            USING(term)
+    );
+
+    ------------------------------------------------------------------------------------------
+    -- 2) Explode the block_max lists to calculate per doc block_max (∑_i max(term_i, block))
+    ------------------------------------------------------------------------------------------
+    CREATE TEMP TABLE bm25_doc_scores AS
+    SELECT
+        p.doc_id,
+        SUM(p.bm25_score) AS score,
+        ROW_NUMBER() OVER (ORDER BY SUM(p.bm25_score) DESC) AS rn
+    FROM 
+        q_terms,
+        UNNEST(doc_list) AS p
+    GROUP BY doc_id;
+
+    ----------------------------------
+    -- 3) Return the top‑k documents
+    ----------------------------------
+    SELECT
+        movie_id,
+        movie_details,
+        score
+    FROM bm25_doc_scores
+    JOIN movies.doc_stats
+        USING(doc_id)
+    JOIN movies.movies
+        USING(movie_id)
+    WHERE rn <= k
+    ORDER BY score DESC;
+END;

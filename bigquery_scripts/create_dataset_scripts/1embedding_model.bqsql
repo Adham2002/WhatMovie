@@ -1,0 +1,6 @@
+CREATE OR REPLACE MODEL
+	dense_embedding_model
+REMOTE WITH CONNECTION 
+	DEFAULT
+OPTIONS
+	(ENDPOINT = 'text-embedding-005');

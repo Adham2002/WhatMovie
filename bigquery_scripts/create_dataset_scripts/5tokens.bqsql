@@ -1,0 +1,12 @@
+CREATE OR REPLACE TABLE tokens AS
+	SELECT
+		movie_id,
+		token
+	FROM
+		movies,         -- comma is short-hand for cross joining 2 tables
+		UNNEST( SPLIT(
+			LOWER(REGEXP_REPLACE(movie_details, r'[^A-Za-z0-9 ]', '')),
+			' '
+		)) AS token
+	WHERE 
+		token != '';

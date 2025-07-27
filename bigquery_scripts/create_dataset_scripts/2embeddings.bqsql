@@ -1,0 +1,14 @@
+CREATE OR REPLACE TABLE movies.dense_embeddings AS
+    SELECT
+        movie_id,
+        ml_generate_embedding_result AS embeddings
+        FROM 
+            ML.GENERATE_EMBEDDING(
+                MODEL movies.dense_embedding_model,
+                (
+                    SELECT
+                    movie_id,
+                    movie_details AS content
+                    FROM movies.movies
+                )
+            );

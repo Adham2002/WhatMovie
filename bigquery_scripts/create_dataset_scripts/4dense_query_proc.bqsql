@@ -1,0 +1,27 @@
+CREATE OR REPLACE PROCEDURE movies.query_dense_index (q STRING, k INT64)
+BEGIN
+    WITH top_k AS(
+        SELECT query.query, base.movie_id, base.embeddings
+        FROM
+        VECTOR_SEARCH(
+            TABLE `movies.dense_embeddings`,
+            'embeddings',
+            (
+                SELECT 
+                    ml_generate_embedding_result, content AS query
+                FROM 
+                    ML.GENERATE_EMBEDDING(
+                        MODEL movies.dense_embedding_model,
+                        (SELECT q as content)
+                    )
+            ),
+            top_k => 50
+        )
+    )
+
+    SELECT movie_id, movie_details
+    FROM
+        top_k
+    JOIN movies.movies
+        USING (movie_id);
+END;

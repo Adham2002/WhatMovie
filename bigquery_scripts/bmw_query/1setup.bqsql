@@ -1,0 +1,48 @@
+CREATE OR REPLACE PROCEDURE `test.bm25_bmw_search`(q STRING, k INT64)
+-------------------------------------------------------------------
+--  Procedure: dataset.search_bm25
+--  Args
+--     IN  q   STRING        e.g. 'ballet rivalry drama'
+--     IN  k   INT64         number of hits to return
+--  Result
+--     SELECT doc_id , score
+-------------------------------------------------------------------
+BEGIN
+    ------------------------------------------------------
+    -- 1) Pull the matching rows from the inverted index
+    ------------------------------------------------------
+    CREATE OR REPLACE TABLE test.q_terms AS (
+        WITH q_tokens AS (
+            SELECT 
+                term
+            FROM 
+                UNNEST(SPLIT(LOWER(REGEXP_REPLACE(q, r'[^A-Za-z0-9 ]', '')), ' ')) AS term
+            WHERE term != ''
+        )
+
+        SELECT
+            ROW_NUMBER() OVER() AS term_id,
+            term, 
+            block_list,
+            doc_list
+        FROM 
+            q_tokens 
+        JOIN test.inverted_index
+            USING(term)
+    );
+
+    ------------------------------------------------------------------------------------------
+    -- 2) Explode the block_max lists to calculate per doc block_max (∑_i max(term_i, block))
+    ------------------------------------------------------------------------------------------
+    CREATE OR REPLACE TABLE test.doc_block_maxes AS (
+        SELECT
+            bm.block_num,
+            SUM(bm.block_max) AS block_max_score,
+        FROM 
+            test.q_terms,
+            UNNEST(block_list) AS bm
+        GROUP BY 
+            bm.block_num
+    );
+
+END;
