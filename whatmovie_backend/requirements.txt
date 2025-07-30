@@ -1,0 +1,8 @@
+Django
+djangorestframework
+django-cors-headers
+google-cloud-bigquery
+google-generativeai
+pandas
+db-dtypes
+#pip install -U ipykernel       # uncomment if you want to test the chatbot or data ingestion code using the jupyter notebooks 

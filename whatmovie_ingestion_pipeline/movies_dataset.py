@@ -111,10 +111,12 @@ class MovieDataset():
         job = self.bq_client.load_table_from_dataframe(self.movie_df, f'{self.bq_client.project}.{self.dataset}.movies')
         job.result()
         
-        # Run create scripts
+        # Get all filenames in 'create_dataset_scripts' folder
         create_files_dir = os.path.join(os.getcwd(), 'bigquery_scripts', 'create_dataset_scripts')
+        # Store filenames in a list (sorted alphanumerically)
         create_files = sorted(os.listdir(create_files_dir))
         
+        # Loop over scripts in 'create_dataset_scripts' folder and run them
         for filename in create_files:
             with open(os.path.join(create_files_dir, filename)) as q:
                 self.bq_client.query_and_wait(q.read())

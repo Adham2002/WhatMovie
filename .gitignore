@@ -12,3 +12,8 @@ __pycache__/
 # System files
 .DS_Store
 Thumbs.db
+# Virtual environment files
+venv/
+node_modules/
+# vscode stored defaults
+*.vscode
